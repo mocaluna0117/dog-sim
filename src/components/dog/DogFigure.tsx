@@ -10,8 +10,17 @@
 //
 // 犬種ごとの違い(色・耳のかたち・しっぽのかたち)は breeds.ts の visual 設定で決まる。
 // デザインは 200×200 の座標系で作ってあり、size に合わせて全体が拡大縮小される。
+//
+// 【だいじな実装ルール】
+// アニメーションするグループ(AnimatedG)には、動くプロパティ「だけ」を置くこと。
+// originX/originY や 動かない scaleX を同居させてはいけない。
+// 理由: アニメーション中は毎フレーム「動いているプロパティだけ」がネイティブ側に
+// 送られ、SVGはそれだけで変換をつくり直すため、同居した静的な値が消えて
+// パーツが (0,0) を軸に吹っ飛ぶ。そこで AnimatedPivot という
+// 「静的なGで回転の中心へ移動 → AnimatedGは動く値だけ → 静的なGで元に戻す」
+// 3層構造を使っている。
 
-import { useEffect, useRef } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 import { Breed } from '../../breeds';
@@ -19,6 +28,45 @@ import { MoodLevel } from '../../gameLogic';
 
 // SVGのグループ(G)をAnimatedで動かせるようにする
 const AnimatedG = Animated.createAnimatedComponent(G);
+
+/** アニメーションできる数値(Animated.Value やその計算結果) */
+type AnimatedNumber =
+  | Animated.Value
+  | Animated.AnimatedInterpolation<number>
+  | Animated.AnimatedAddition<number>;
+
+/**
+ * 「(x, y) を中心に回転・伸縮するアニメーショングループ」。
+ * 上のだいじな実装ルールを守るための部品。
+ *
+ * ※ x / y / rotation / scaleX / scaleY にはエディタで「非推奨」と出るが、
+ *   Animatedで毎フレーム値を流し込めるのはこの個別プロパティだけなので
+ *   ここではあえて使っている(react-native-svg 15系では問題なく動く)。
+ */
+function AnimatedPivot({
+  x,
+  y,
+  rotation,
+  scaleY,
+  staticScaleX,
+  children,
+}: {
+  x: number;
+  y: number;
+  rotation?: AnimatedNumber;
+  scaleY?: AnimatedNumber;
+  /** アニメしない横方向の伸縮(太り具合)。静的な外側のGにかける */
+  staticScaleX?: number;
+  children: ReactNode;
+}) {
+  return (
+    <G x={x} y={y} scaleX={staticScaleX}>
+      <AnimatedG rotation={rotation} scaleY={scaleY}>
+        <G x={-x} y={-y}>{children}</G>
+      </AnimatedG>
+    </G>
+  );
+}
 
 type Props = {
   breed: Breed;
@@ -34,11 +82,15 @@ type Props = {
   animated?: boolean;
 };
 
-/** きぶんごとの しっぽの動き(振る速さと角度の範囲) */
-const TAIL: Record<MoodLevel, { duration: number; range: [number, number] }> = {
-  great: { duration: 200, range: [-12, 16] },
-  ok: { duration: 600, range: [-6, 8] },
-  sad: { duration: 1400, range: [18, 24] }, // 下がったまま、ゆっくり小さく
+/**
+ * きぶんごとの しっぽの動き。
+ * center = しっぽの基本角度(悲しいと大きい=垂れ下がる)
+ * amplitude = そこから前後に振れる幅 / duration = 片道の速さ
+ */
+const TAIL: Record<MoodLevel, { duration: number; center: number; amplitude: number }> = {
+  great: { duration: 200, center: 2, amplitude: 14 },
+  ok: { duration: 600, center: 1, amplitude: 7 },
+  sad: { duration: 1400, center: 21, amplitude: 3 },
 };
 
 export function DogFigure({
@@ -54,7 +106,10 @@ export function DogFigure({
   // アニメーションの「現在値」たち。0〜1 の数値を interpolate で角度などに変換する
   const breath = useRef(new Animated.Value(0)).current;
   const blink = useRef(new Animated.Value(1)).current;
-  const wag = useRef(new Animated.Value(0.5)).current;
+  // しっぽ = 「振りのリズム(wag)」と「基本角度(tailCenter)」の合成。
+  // きぶんが変わったとき、基本角度だけをなめらかに動かせるように分けてある
+  const wag = useRef(new Animated.Value(0)).current;
+  const tailCenter = useRef(new Animated.Value(TAIL[mood].center)).current;
   const earDroop = useRef(new Animated.Value(mood === 'sad' ? 1 : 0)).current;
   const jump = useRef(new Animated.Value(0)).current;
 
@@ -95,7 +150,8 @@ export function DogFigure({
     return () => loop.stop();
   }, [animated, blink]);
 
-  // しっぽ: きぶんが変わったら振る速さも変える
+  // しっぽの振り: きぶんが変わったら速さを変えて振り直す
+  // (0で始まり0で終わるので、ループの繰り返しで角度が飛ばない)
   useEffect(() => {
     if (!animated) return;
     const { duration } = TAIL[mood];
@@ -118,6 +174,16 @@ export function DogFigure({
     loop.start();
     return () => loop.stop();
   }, [animated, mood, wag]);
+
+  // しっぽの基本角度: きぶんが変わったら、なめらかに垂れる/上がる
+  useEffect(() => {
+    const toValue = TAIL[mood].center;
+    if (animated) {
+      Animated.timing(tailCenter, { toValue, duration: 350, useNativeDriver: false }).start();
+    } else {
+      tailCenter.setValue(toValue);
+    }
+  }, [animated, mood, tailCenter]);
 
   // 耳: 悲しいときだけ しょんぼり垂れる
   useEffect(() => {
@@ -148,7 +214,11 @@ export function DogFigure({
 
   // 現在値 → 実際の見た目の値 への変換
   const breathScale = breath.interpolate({ inputRange: [0, 1], outputRange: [1, 1.035] });
-  const tailRotation = wag.interpolate({ inputRange: [0, 1], outputRange: TAIL[mood].range });
+  const { amplitude } = TAIL[mood];
+  const tailRotation = Animated.add(
+    tailCenter,
+    wag.interpolate({ inputRange: [0, 1], outputRange: [-amplitude, amplitude] })
+  );
   const jumpTranslate = jump.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
   // 耳の傾き: とがり耳は大きく、垂れ耳はもともと垂れているので小さめに
   const earAngle = v.earType === 'pointy' ? 24 : 10;
@@ -159,9 +229,10 @@ export function DogFigure({
 
   return (
     <Svg width={size} height={size} viewBox="0 0 200 200">
+      {/* ジャンプは「たて移動」だけなので、中心の指定はいらない */}
       <AnimatedG translateY={jumpTranslate}>
-        {/* しっぽ(体のうしろ) */}
-        <AnimatedG rotation={tailRotation} originX={137} originY={150}>
+        {/* しっぽ(体のうしろ)。付け根 (137,150) を中心に回る */}
+        <AnimatedPivot x={137} y={150} rotation={tailRotation}>
           {v.tailType === 'curl' ? (
             <Path
               d="M136 150 q 26 2 30 -18 q 3 -17 -14 -19 q 9 5 7 15 q -3 14 -23 14 z"
@@ -173,29 +244,29 @@ export function DogFigure({
               fill={v.coatDark}
             />
           )}
-        </AnimatedG>
+        </AnimatedPivot>
 
-        {/* 体(呼吸でふくらみ、太ると横にひろがる) */}
-        <AnimatedG scaleX={chubby} scaleY={breathScale} originX={100} originY={180}>
+        {/* 体: あしもと (100,180) を基準に、呼吸でふくらみ、太ると横にひろがる */}
+        <AnimatedPivot x={100} y={180} scaleY={breathScale} staticScaleX={chubby}>
           <Ellipse cx={100} cy={148} rx={46} ry={36} fill={v.coat} />
           <Ellipse cx={100} cy={158} rx={26} ry={22} fill={v.coatLight} />
           <Rect x={82} y={140} width={14} height={40} rx={7} fill={v.coat} />
           <Rect x={104} y={140} width={14} height={40} rx={7} fill={v.coat} />
           <Ellipse cx={89} cy={180} rx={8} ry={5.5} fill={v.paw} />
           <Ellipse cx={111} cy={180} rx={8} ry={5.5} fill={v.paw} />
-        </AnimatedG>
+        </AnimatedPivot>
 
         {/* とがり耳は頭のうしろ側に描く(付け根が頭にかくれる) */}
         {v.earType === 'pointy' && (
           <>
-            <AnimatedG rotation={earLeftRotation} originX={70} originY={56}>
+            <AnimatedPivot x={70} y={56} rotation={earLeftRotation}>
               <Path d="M62 62 L 54 26 Q 53 20 59 22 L 88 40 z" fill={v.coat} />
               <Path d="M66 54 L 61 32 L 80 44 z" fill="#F7C6C5" />
-            </AnimatedG>
-            <AnimatedG rotation={earRightRotation} originX={130} originY={56}>
+            </AnimatedPivot>
+            <AnimatedPivot x={130} y={56} rotation={earRightRotation}>
               <Path d="M138 62 L 146 26 Q 147 20 141 22 L 112 40 z" fill={v.coat} />
               <Path d="M134 54 L 139 32 L 120 44 z" fill="#F7C6C5" />
-            </AnimatedG>
+            </AnimatedPivot>
           </>
         )}
 
@@ -205,18 +276,18 @@ export function DogFigure({
         {/* 垂れ耳は頭の上にかぶせて横に垂らす */}
         {v.earType === 'floppy' && (
           <>
-            <AnimatedG rotation={earLeftRotation} originX={66} originY={54}>
+            <AnimatedPivot x={66} y={54} rotation={earLeftRotation}>
               <Path
                 d="M64 52 q -18 4 -16 34 q 1 18 12 20 q 8 1 10 -12 q 2 -22 -6 -42 z"
                 fill={v.coatDark}
               />
-            </AnimatedG>
-            <AnimatedG rotation={earRightRotation} originX={134} originY={54}>
+            </AnimatedPivot>
+            <AnimatedPivot x={134} y={54} rotation={earRightRotation}>
               <Path
                 d="M136 52 q 18 4 16 34 q -1 18 -12 20 q -8 1 -10 -12 q -2 -22 6 -42 z"
                 fill={v.coatDark}
               />
-            </AnimatedG>
+            </AnimatedPivot>
           </>
         )}
 
@@ -262,15 +333,15 @@ export function DogFigure({
           </>
         )}
 
-        {/* 目(まばたきで縦につぶれる) */}
-        <AnimatedG scaleY={blink} originX={80} originY={82}>
+        {/* 目: それぞれの目の中心を基準に、まばたきで縦につぶれる */}
+        <AnimatedPivot x={80} y={82} scaleY={blink}>
           <Circle cx={80} cy={82} r={7} fill="#3E2C20" />
           <Circle cx={82.5} cy={79.5} r={2.4} fill="#fff" />
-        </AnimatedG>
-        <AnimatedG scaleY={blink} originX={120} originY={82}>
+        </AnimatedPivot>
+        <AnimatedPivot x={120} y={82} scaleY={blink}>
           <Circle cx={120} cy={82} r={7} fill="#3E2C20" />
           <Circle cx={122.5} cy={79.5} r={2.4} fill="#fff" />
-        </AnimatedG>
+        </AnimatedPivot>
       </AnimatedG>
     </Svg>
   );
