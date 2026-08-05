@@ -96,6 +96,15 @@ const URAJIRO_FACE = fluffyPath(100, 106, 31, 21, 9, 0.18);
 const CHEST_FLUFF = fluffyPath(100, 128, 21, 11, 8, 0.3);
 /** 裏白のおでこの白いすじ(ブレーズ) */
 const URAJIRO_BLAZE = 'M100 62 q 8 2 7 14 q -1 10 -7 16 q -6 -6 -7 -16 q -1 -12 7 -14 z';
+/** もこもこのおひげ(シュナウザー) */
+const BEARD = fluffyPath(100, 107, 20, 15, 8, 0.25);
+/** 頭のちょんまげ(シーズー) */
+const TOPKNOT = fluffyPath(100, 38, 11, 9, 7, 0.3);
+/** バットイヤー(フレブル): 幅広で先の丸い立ち耳 */
+const BAT_EAR_LEFT = 'M 50 64 Q 42 34 54 22 Q 64 13 74 26 Q 84 40 86 58 z';
+const BAT_EAR_LEFT_INNER = 'M 56 56 Q 52 36 60 28 Q 66 23 72 32 Q 78 42 79 54 z';
+const BAT_EAR_RIGHT = 'M 150 64 Q 158 34 146 22 Q 136 13 126 26 Q 116 40 114 58 z';
+const BAT_EAR_RIGHT_INNER = 'M 144 56 Q 148 36 140 28 Q 134 23 128 32 Q 122 42 121 54 z';
 
 type Props = {
   breed: Breed;
@@ -255,11 +264,13 @@ export function DogFigure({
   );
   const jumpTranslate = jump.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
   // 耳の傾き: とがり耳は大きく、垂れ耳・もこもこ耳はもともと垂れているので小さめに
-  const earAngle = v.earType === 'pointy' ? 24 : 10;
+  const earAngle = v.earType === 'pointy' ? 24 : v.earType === 'bat' ? 18 : 10;
   const earLeftRotation = earDroop.interpolate({ inputRange: [0, 1], outputRange: [0, -earAngle] });
   const earRightRotation = earDroop.interpolate({ inputRange: [0, 1], outputRange: [0, earAngle] });
   // 太り具合: 0.9〜1.3倍の範囲で体の横幅にそのまま反映
   const chubby = Math.max(0.9, Math.min(1.3, bodyRatio));
+  // 体の横幅 = 太り具合 × 犬種の体型(ダックスの長い胴など)
+  const bodyWidth = chubby * (v.bodyScaleX ?? 1);
   // もこもこ耳の回転中心(耳の付け根の上あたり)
   const fluffyEarPivotY = 64;
   // もこもこ頭×とがり耳(ポメラニアン等)は、耳を内側・下に寄せて輪郭につなげる
@@ -273,8 +284,15 @@ export function DogFigure({
     <Svg width={size} height={size} viewBox="0 0 200 200">
       {/* ジャンプは「たて移動」だけなので、中心の指定はいらない */}
       <AnimatedG translateY={jumpTranslate}>
-        {/* しっぽ(体のうしろ)。付け根 (137,150) を中心に回る */}
-        <AnimatedPivot x={137} y={150} rotation={tailRotation}>
+        {/* しっぽ(体のうしろ)。付け根 (137,150) を中心に回る。
+            ちょこんしっぽ(stub)は短いので、太った体に隠れて消えないよう
+            体の横幅と同じだけ外側へスケールさせる */}
+        <AnimatedPivot
+          x={137}
+          y={150}
+          rotation={tailRotation}
+          staticScaleX={v.tailType === 'stub' ? bodyWidth : undefined}
+        >
           {v.tailType === 'curl' && (
             <>
               <Path d={CURL_TAIL} fill={v.coat} {...LINE} />
@@ -295,10 +313,14 @@ export function DogFigure({
             />
           )}
           {v.tailType === 'pom' && <Path d={POM_TAIL} fill={v.coat} {...LINE} />}
+          {v.tailType === 'stub' && (
+            <Circle cx={149} cy={143} r={8} fill={v.coatDark} {...LINE} />
+          )}
         </AnimatedPivot>
 
-        {/* 体: あしもと (100,180) を基準に、呼吸でふくらみ、太ると横にひろがる */}
-        <AnimatedPivot x={100} y={180} scaleY={breathScale} staticScaleX={chubby}>
+        {/* 体: あしもと (100,180) を基準に、呼吸でふくらみ、太ると横にひろがる。
+            犬種ごとの体型(ダックスの長い胴など)もここで掛け合わせる */}
+        <AnimatedPivot x={100} y={180} scaleY={breathScale} staticScaleX={bodyWidth}>
           {bodyStyle === 'fluffy' ? (
             <>
               {/* もこもこボディ。あしは線で描くと、ぬいぐるみっぽさが出る */}
@@ -353,6 +375,20 @@ export function DogFigure({
           </>
         )}
 
+        {/* バットイヤー(フレブル)も頭のうしろ側 */}
+        {v.earType === 'bat' && (
+          <>
+            <AnimatedPivot x={68} y={60} rotation={earLeftRotation}>
+              <Path d={BAT_EAR_LEFT} fill={v.coat} {...LINE} />
+              <Path d={BAT_EAR_LEFT_INNER} fill="#F7C6C5" />
+            </AnimatedPivot>
+            <AnimatedPivot x={132} y={60} rotation={earRightRotation}>
+              <Path d={BAT_EAR_RIGHT} fill={v.coat} {...LINE} />
+              <Path d={BAT_EAR_RIGHT_INNER} fill="#F7C6C5" />
+            </AnimatedPivot>
+          </>
+        )}
+
         {/* 頭 */}
         {headStyle === 'fluffy' ? (
           <Path d={FLUFFY_HEAD} fill={v.coat} {...LINE} />
@@ -363,23 +399,30 @@ export function DogFigure({
         {/* ふわふわの白い胸毛 */}
         {(v.chestFluff ?? false) && <Path d={CHEST_FLUFF} fill={v.coatLight} />}
 
-        {/* 垂れ耳・もこもこ耳は頭の上にかぶせて横に垂らす */}
+        {/* 垂れ耳・もこもこ耳は頭の上にかぶせて横に垂らす。
+            拡大(earSize)は耳の上端を基準に、下へ伸ばす */}
         {v.earType === 'floppy' && (
           <>
-            <AnimatedPivot x={66} y={54} rotation={earLeftRotation}>
-              <Path
-                d="M64 52 q -18 4 -16 34 q 1 18 12 20 q 8 1 10 -12 q 2 -22 -6 -42 z"
-                fill={v.coatDark}
-                {...LINE}
-              />
-            </AnimatedPivot>
-            <AnimatedPivot x={134} y={54} rotation={earRightRotation}>
-              <Path
-                d="M136 52 q 18 4 16 34 q -1 18 -12 20 q -8 1 -10 -12 q -2 -22 6 -42 z"
-                fill={v.coatDark}
-                {...LINE}
-              />
-            </AnimatedPivot>
+            <G scale={earSize} originX={66} originY={52}>
+              <AnimatedPivot x={66} y={54} rotation={earLeftRotation}>
+                <Path
+                  d="M64 52 q -18 4 -16 34 q 1 18 12 20 q 8 1 10 -12 q 2 -22 -6 -42 z"
+                  fill={v.coatDark}
+                  {...LINE}
+                  strokeWidth={LINE.strokeWidth / earSize}
+                />
+              </AnimatedPivot>
+            </G>
+            <G scale={earSize} originX={134} originY={52}>
+              <AnimatedPivot x={134} y={54} rotation={earRightRotation}>
+                <Path
+                  d="M136 52 q 18 4 16 34 q -1 18 -12 20 q -8 1 -10 -12 q -2 -22 6 -42 z"
+                  fill={v.coatDark}
+                  {...LINE}
+                  strokeWidth={LINE.strokeWidth / earSize}
+                />
+              </AnimatedPivot>
+            </G>
           </>
         )}
         {v.earType === 'fluffy' && (
@@ -390,6 +433,28 @@ export function DogFigure({
             <AnimatedPivot x={150} y={fluffyEarPivotY} rotation={earRightRotation}>
               <Path d={FLUFFY_EAR_RIGHT} fill={v.coat} {...LINE} />
             </AnimatedPivot>
+          </>
+        )}
+
+        {/* ちょんまげ+リボン(シーズー) */}
+        {(v.topknot ?? false) && (
+          <>
+            <Path d={TOPKNOT} fill={v.coat} {...LINE} />
+            <Path
+              d="M97 30 L86 24 L86 36 z"
+              fill="#F48FB1"
+              stroke={OUTLINE}
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+            <Path
+              d="M103 30 L114 24 L114 36 z"
+              fill="#F48FB1"
+              stroke={OUTLINE}
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+            <Circle cx={100} cy={30} r={3.5} fill="#F48FB1" stroke={OUTLINE} strokeWidth={2} />
           </>
         )}
 
@@ -409,6 +474,10 @@ export function DogFigure({
             <Path d={URAJIRO_BLAZE} fill={v.coatLight} />
           </>
         )}
+        {muzzleStyle === 'beard' && <Path d={BEARD} fill={v.coatLight} />}
+
+        {/* 片目のまわりの茶色いパッチ(ジャックラッセル) */}
+        {(v.eyePatch ?? false) && <Ellipse cx={120} cy={80} rx={13.5} ry={15} fill={v.coatDark} />}
         <Ellipse cx={70} cy={98} rx={8} ry={5.5} fill="#F5A9A0" opacity={0.85} />
         <Ellipse cx={130} cy={98} rx={8} ry={5.5} fill="#F5A9A0" opacity={0.85} />
 

@@ -4,19 +4,26 @@
 
 /** 犬の見た目の設定。DogFigure(SVGで描く犬)がこれを読んで描き分ける */
 export type BreedVisual = {
-  /** 耳のかたち: とがり耳 / 垂れ耳 / もこもこ(プードル系) */
-  earType: 'pointy' | 'floppy' | 'fluffy';
-  /** しっぽのかたち: くるん / ふさふさ / ぽんぽん(プードル系) */
-  tailType: 'curl' | 'fluffy' | 'pom';
+  /** 耳のかたち: とがり耳 / 垂れ耳 / もこもこ(プードル系) / バットイヤー(フレブル) */
+  earType: 'pointy' | 'floppy' | 'fluffy' | 'bat';
+  /** しっぽのかたち: くるん / ふさふさ / ぽんぽん(プードル系) / ちょこん(フレブル) */
+  tailType: 'curl' | 'fluffy' | 'pom' | 'stub';
   /** 頭の輪郭: なめらか(省略時) or もこもこ */
   headStyle?: 'smooth' | 'fluffy';
   /** 体の輪郭: なめらか(省略時) or もこもこ */
   bodyStyle?: 'smooth' | 'fluffy';
   /**
    * 顔の白い部分のかたち。
-   * patch = 口まわりだけ(省略時) / urajiro = ほっぺ〜おでこまで広い白(柴犬など) / none = なし(プードルなど)
+   * patch = 口まわりだけ(省略時) / urajiro = ほっぺ〜おでこまで広い白(柴犬など) /
+   * beard = もこもこのおひげ(シュナウザー) / none = なし(プードルなど)
    */
-  muzzleStyle?: 'patch' | 'urajiro' | 'none';
+  muzzleStyle?: 'patch' | 'urajiro' | 'beard' | 'none';
+  /** 体の横幅の倍率(省略時 1。ダックスの長い胴など) */
+  bodyScaleX?: number;
+  /** 片目のまわりに茶色いパッチを描くか(ジャックラッセル) */
+  eyePatch?: boolean;
+  /** 頭のちょんまげ+リボンを描くか(シーズー) */
+  topknot?: boolean;
   /** おなかを明るい色で塗り分けるか(省略時 true) */
   hasBellyPatch?: boolean;
   /** 耳の大きさの倍率(省略時 1。チワワは大きめ) */
@@ -130,6 +137,7 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'floppy',
       tailType: 'fluffy',
+      chestFluff: true,
       coat: '#E6B865',
       coatDark: '#D9A552',
       coatLight: '#F8E7C2',
@@ -147,6 +155,7 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'floppy',
       tailType: 'fluffy',
+      eyeScale: 1.1,
       coat: '#DFC49A',
       coatDark: '#CFAF7F',
       coatLight: '#F3E8D2',
@@ -165,6 +174,7 @@ export const BREEDS: Breed[] = [
       earType: 'pointy',
       tailType: 'fluffy',
       muzzleStyle: 'urajiro',
+      earSize: 1.25,
       coat: '#E89A3C',
       coatDark: '#D6882E',
       coatLight: '#FFF6E5',
@@ -183,10 +193,13 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'floppy',
       tailType: 'fluffy',
+      earSize: 1.15,
+      bodyScaleX: 1.18,
       coat: '#AD7146',
       coatDark: '#96603A',
       coatLight: '#DDB68C',
       paw: '#C99D6E',
+      hasEyebrows: true,
     },
   },
   {
@@ -203,6 +216,7 @@ export const BREEDS: Breed[] = [
       headStyle: 'fluffy',
       bodyStyle: 'fluffy',
       hasBellyPatch: false,
+      chestFluff: true,
       coat: '#F0BE6C',
       coatDark: '#E2AC55',
       coatLight: '#FBE9CC',
@@ -218,8 +232,8 @@ export const BREEDS: Breed[] = [
     description: 'ぶさかわ担当。いびきもチャームポイント',
     color: '#AEB6BF',
     visual: {
-      earType: 'pointy',
-      tailType: 'curl',
+      earType: 'bat',
+      tailType: 'stub',
       coat: '#C9BEB2',
       coatDark: '#B4A899',
       coatLight: '#EBE4DA',
@@ -237,10 +251,12 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'floppy',
       tailType: 'fluffy',
+      muzzleStyle: 'beard',
       coat: '#9BA5AB',
       coatDark: '#86929A',
       coatLight: '#DCE1E4',
       paw: '#C3CBD0',
+      hasEyebrows: true,
     },
   },
   {
@@ -254,8 +270,9 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'floppy',
       tailType: 'fluffy',
+      eyePatch: true,
       coat: '#F1E8D8',
-      coatDark: '#D9C9AF',
+      coatDark: '#C9A876',
       coatLight: '#FFFDF8',
       paw: '#E8DCC6',
     },
@@ -272,6 +289,7 @@ export const BREEDS: Breed[] = [
       earType: 'floppy',
       tailType: 'curl',
       bodyStyle: 'fluffy',
+      topknot: true,
       coat: '#D9C7B0',
       coatDark: '#C4AE92',
       coatLight: '#F2EADC',
