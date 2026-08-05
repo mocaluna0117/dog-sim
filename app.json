@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "dog_sim",
+    "name": "わんこそだて",
     "slug": "dog_sim",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMotionUsageDescription": "歩いた歩数を犬のおさんぽに反映するために使います。"
+      }
     },
     "android": {
+      "permissions": ["android.permission.ACTIVITY_RECOGNITION"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
