@@ -86,6 +86,16 @@ const FLUFFY_BODY = fluffyPath(100, 150, 44, 34, 10, 0.28);
 const FLUFFY_EAR_LEFT = fluffyPath(48, 88, 17, 27, 8, 0.35);
 const FLUFFY_EAR_RIGHT = fluffyPath(152, 88, 17, 27, 8, 0.35);
 const POM_TAIL = fluffyPath(154, 141, 14, 14, 8, 0.35);
+/** くるんしっぽ: シナモンロールみたいな太い巻きしっぽ */
+const CURL_TAIL = fluffyPath(151, 136, 15, 15, 9, 0.25);
+/** くるんしっぽの中のうずまき線 */
+const CURL_SWIRL = 'M 160 128 A 10.5 10.5 0 1 0 156 147 A 6 6 0 1 0 152 136';
+/** 裏白: 柴犬などの、ほっぺ〜あごに広がる白いもこもこ */
+const URAJIRO_FACE = fluffyPath(100, 106, 31, 21, 9, 0.18);
+/** ふわふわの白い胸毛(ロングコートのチワワなど) */
+const CHEST_FLUFF = fluffyPath(100, 128, 21, 11, 8, 0.3);
+/** 裏白のおでこの白いすじ(ブレーズ) */
+const URAJIRO_BLAZE = 'M100 62 q 8 2 7 14 q -1 10 -7 16 q -6 -6 -7 -16 q -1 -12 7 -14 z';
 
 type Props = {
   breed: Breed;
@@ -124,7 +134,7 @@ export function DogFigure({
   // 省略できる見た目設定は、ここでデフォルト値を決める
   const headStyle = v.headStyle ?? 'smooth';
   const bodyStyle = v.bodyStyle ?? 'smooth';
-  const hasMuzzlePatch = v.hasMuzzlePatch ?? true;
+  const muzzleStyle = v.muzzleStyle ?? 'patch';
   const hasBellyPatch = v.hasBellyPatch ?? true;
 
   // アニメーションの「現在値」たち。0〜1 の数値を interpolate で角度などに変換する
@@ -255,6 +265,9 @@ export function DogFigure({
   // もこもこ頭×とがり耳(ポメラニアン等)は、耳を内側・下に寄せて輪郭につなげる
   const pointyEarShiftX = headStyle === 'fluffy' ? 7 : 0;
   const pointyEarShiftY = headStyle === 'fluffy' ? 9 : 0;
+  // 耳と目の大きさの倍率(チワワなどは大きめ)
+  const earSize = v.earSize ?? 1;
+  const eyeScale = v.eyeScale ?? 1;
 
   return (
     <Svg width={size} height={size} viewBox="0 0 200 200">
@@ -263,11 +276,16 @@ export function DogFigure({
         {/* しっぽ(体のうしろ)。付け根 (137,150) を中心に回る */}
         <AnimatedPivot x={137} y={150} rotation={tailRotation}>
           {v.tailType === 'curl' && (
-            <Path
-              d="M136 150 q 26 2 30 -18 q 3 -17 -14 -19 q 9 5 7 15 q -3 14 -23 14 z"
-              fill={v.coatDark}
-              {...LINE}
-            />
+            <>
+              <Path d={CURL_TAIL} fill={v.coat} {...LINE} />
+              <Path
+                d={CURL_SWIRL}
+                stroke={OUTLINE}
+                strokeWidth={2.5}
+                fill="none"
+                strokeLinecap="round"
+              />
+            </>
           )}
           {v.tailType === 'fluffy' && (
             <Path
@@ -306,15 +324,29 @@ export function DogFigure({
         {/* とがり耳は頭のうしろ側に描く(付け根が頭にかくれる) */}
         {v.earType === 'pointy' && (
           <>
-            <G x={pointyEarShiftX} y={pointyEarShiftY}>
+            {/* 外側のGは静的(位置ずらし+大きさ)。回転は中のAnimatedPivotが担当。
+                拡大の基準点は耳先寄り(y=30)にする: 耳が「上」ではなく「下(頭のうしろ)」へ
+                伸びるので、ジャンプしても耳先が画面からはみ出さず、付け根も頭に埋まったまま。
+                線の太さは拡大で太ってしまうぶんを割り戻して、他のパーツと揃える */}
+            <G x={pointyEarShiftX} y={pointyEarShiftY} scale={earSize} originX={70} originY={30}>
               <AnimatedPivot x={70} y={56} rotation={earLeftRotation}>
-                <Path d="M62 62 L 54 26 Q 53 20 59 22 L 88 40 z" fill={v.coat} {...LINE} />
+                <Path
+                  d="M62 62 L 54 26 Q 53 20 59 22 L 88 40 z"
+                  fill={v.coat}
+                  {...LINE}
+                  strokeWidth={LINE.strokeWidth / earSize}
+                />
                 <Path d="M66 54 L 61 32 L 80 44 z" fill="#F7C6C5" />
               </AnimatedPivot>
             </G>
-            <G x={-pointyEarShiftX} y={pointyEarShiftY}>
+            <G x={-pointyEarShiftX} y={pointyEarShiftY} scale={earSize} originX={130} originY={30}>
               <AnimatedPivot x={130} y={56} rotation={earRightRotation}>
-                <Path d="M138 62 L 146 26 Q 147 20 141 22 L 112 40 z" fill={v.coat} {...LINE} />
+                <Path
+                  d="M138 62 L 146 26 Q 147 20 141 22 L 112 40 z"
+                  fill={v.coat}
+                  {...LINE}
+                  strokeWidth={LINE.strokeWidth / earSize}
+                />
                 <Path d="M134 54 L 139 32 L 120 44 z" fill="#F7C6C5" />
               </AnimatedPivot>
             </G>
@@ -327,6 +359,9 @@ export function DogFigure({
         ) : (
           <Circle cx={100} cy={84} r={44} fill={v.coat} {...LINE} />
         )}
+
+        {/* ふわふわの白い胸毛 */}
+        {(v.chestFluff ?? false) && <Path d={CHEST_FLUFF} fill={v.coatLight} />}
 
         {/* 垂れ耳・もこもこ耳は頭の上にかぶせて横に垂らす */}
         {v.earType === 'floppy' && (
@@ -366,8 +401,14 @@ export function DogFigure({
           </>
         )}
 
-        {/* マズル(口まわり)・ほっぺ */}
-        {hasMuzzlePatch && <Ellipse cx={100} cy={102} rx={22} ry={16} fill={v.coatLight} />}
+        {/* 顔の白い部分・ほっぺ */}
+        {muzzleStyle === 'patch' && <Ellipse cx={100} cy={102} rx={22} ry={16} fill={v.coatLight} />}
+        {muzzleStyle === 'urajiro' && (
+          <>
+            <Path d={URAJIRO_FACE} fill={v.coatLight} />
+            <Path d={URAJIRO_BLAZE} fill={v.coatLight} />
+          </>
+        )}
         <Ellipse cx={70} cy={98} rx={8} ry={5.5} fill="#F5A9A0" opacity={0.85} />
         <Ellipse cx={130} cy={98} rx={8} ry={5.5} fill="#F5A9A0" opacity={0.85} />
 
@@ -407,12 +448,12 @@ export function DogFigure({
 
         {/* 目: それぞれの目の中心を基準に、まばたきで縦につぶれる */}
         <AnimatedPivot x={80} y={82} scaleY={blink}>
-          <Circle cx={80} cy={82} r={6.5} fill={OUTLINE} />
-          <Circle cx={82.3} cy={79.7} r={2} fill="#fff" />
+          <Circle cx={80} cy={82} r={6.5 * eyeScale} fill={OUTLINE} />
+          <Circle cx={80 + 2.3 * eyeScale} cy={82 - 2.3 * eyeScale} r={2 * eyeScale} fill="#fff" />
         </AnimatedPivot>
         <AnimatedPivot x={120} y={82} scaleY={blink}>
-          <Circle cx={120} cy={82} r={6.5} fill={OUTLINE} />
-          <Circle cx={122.3} cy={79.7} r={2} fill="#fff" />
+          <Circle cx={120} cy={82} r={6.5 * eyeScale} fill={OUTLINE} />
+          <Circle cx={120 + 2.3 * eyeScale} cy={82 - 2.3 * eyeScale} r={2 * eyeScale} fill="#fff" />
         </AnimatedPivot>
       </AnimatedG>
     </Svg>

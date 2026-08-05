@@ -12,10 +12,19 @@ export type BreedVisual = {
   headStyle?: 'smooth' | 'fluffy';
   /** 体の輪郭: なめらか(省略時) or もこもこ */
   bodyStyle?: 'smooth' | 'fluffy';
-  /** 口まわりを明るい色で塗り分けるか(省略時 true。プードルは false) */
-  hasMuzzlePatch?: boolean;
+  /**
+   * 顔の白い部分のかたち。
+   * patch = 口まわりだけ(省略時) / urajiro = ほっぺ〜おでこまで広い白(柴犬など) / none = なし(プードルなど)
+   */
+  muzzleStyle?: 'patch' | 'urajiro' | 'none';
   /** おなかを明るい色で塗り分けるか(省略時 true) */
   hasBellyPatch?: boolean;
+  /** 耳の大きさの倍率(省略時 1。チワワは大きめ) */
+  earSize?: number;
+  /** 目の大きさの倍率(省略時 1。チワワは大きめ) */
+  eyeScale?: number;
+  /** 首もとにふわふわの白い胸毛を描くか(省略時 false) */
+  chestFluff?: boolean;
   /** 体と頭のメインの毛色 */
   coat: string;
   /** しっぽ・垂れ耳などの少し濃い毛色 */
@@ -59,9 +68,10 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'pointy',
       tailType: 'curl',
+      muzzleStyle: 'urajiro',
       coat: '#E8A860',
       coatDark: '#D89550',
-      coatLight: '#FFF3E0',
+      coatLight: '#FFF6E8',
       paw: '#F5C98A',
       hasEyebrows: true,
     },
@@ -79,7 +89,7 @@ export const BREEDS: Breed[] = [
       tailType: 'pom',
       headStyle: 'fluffy',
       bodyStyle: 'fluffy',
-      hasMuzzlePatch: false,
+      muzzleStyle: 'none',
       hasBellyPatch: false,
       coat: '#CBA06A',
       coatDark: '#B78C55',
@@ -98,6 +108,10 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'pointy',
       tailType: 'curl',
+      muzzleStyle: 'urajiro',
+      earSize: 1.35,
+      eyeScale: 1.25,
+      chestFluff: true,
       coat: '#DDBA8A',
       coatDark: '#CBA26F',
       coatLight: '#F5E8D2',
@@ -150,6 +164,7 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'pointy',
       tailType: 'fluffy',
+      muzzleStyle: 'urajiro',
       coat: '#E89A3C',
       coatDark: '#D6882E',
       coatLight: '#FFF6E5',
