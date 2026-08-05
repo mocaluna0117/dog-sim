@@ -4,10 +4,18 @@
 
 /** 犬の見た目の設定。DogFigure(SVGで描く犬)がこれを読んで描き分ける */
 export type BreedVisual = {
-  /** 耳のかたち: とがり耳 or 垂れ耳 */
-  earType: 'pointy' | 'floppy';
-  /** しっぽのかたち: くるん or ふさふさ */
-  tailType: 'curl' | 'fluffy';
+  /** 耳のかたち: とがり耳 / 垂れ耳 / もこもこ(プードル系) */
+  earType: 'pointy' | 'floppy' | 'fluffy';
+  /** しっぽのかたち: くるん / ふさふさ / ぽんぽん(プードル系) */
+  tailType: 'curl' | 'fluffy' | 'pom';
+  /** 頭の輪郭: なめらか(省略時) or もこもこ */
+  headStyle?: 'smooth' | 'fluffy';
+  /** 体の輪郭: なめらか(省略時) or もこもこ */
+  bodyStyle?: 'smooth' | 'fluffy';
+  /** 口まわりを明るい色で塗り分けるか(省略時 true。プードルは false) */
+  hasMuzzlePatch?: boolean;
+  /** おなかを明るい色で塗り分けるか(省略時 true) */
+  hasBellyPatch?: boolean;
   /** 体と頭のメインの毛色 */
   coat: string;
   /** しっぽ・垂れ耳などの少し濃い毛色 */
@@ -67,12 +75,16 @@ export const BREEDS: Breed[] = [
     description: 'かしこくて明るいくるくる毛のアイドル',
     color: '#C39BD3',
     visual: {
-      earType: 'floppy',
-      tailType: 'curl',
-      coat: '#D4AC85',
-      coatDark: '#C1946B',
-      coatLight: '#EDDCC5',
-      paw: '#E0C3A0',
+      earType: 'fluffy',
+      tailType: 'pom',
+      headStyle: 'fluffy',
+      bodyStyle: 'fluffy',
+      hasMuzzlePatch: false,
+      hasBellyPatch: false,
+      coat: '#CBA06A',
+      coatDark: '#B78C55',
+      coatLight: '#EAD9BE',
+      paw: '#C79E67',
     },
   },
   {
@@ -173,6 +185,9 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'pointy',
       tailType: 'curl',
+      headStyle: 'fluffy',
+      bodyStyle: 'fluffy',
+      hasBellyPatch: false,
       coat: '#F0BE6C',
       coatDark: '#E2AC55',
       coatLight: '#FBE9CC',
@@ -241,6 +256,7 @@ export const BREEDS: Breed[] = [
     visual: {
       earType: 'floppy',
       tailType: 'curl',
+      bodyStyle: 'fluffy',
       coat: '#D9C7B0',
       coatDark: '#C4AE92',
       coatLight: '#F2EADC',

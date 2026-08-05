@@ -36,7 +36,7 @@
 どこを直せば何が変わるかが分かりやすくなるので、この分け方はおすすめ。
 
 | ファイル | 役割 |
-|---|---|
+| --- | --- |
 | [src/balance.ts](src/balance.ts) | **ゲームバランスの数値がぜんぶここに**。お腹の減る速さ、太りやすさ、おやつの回数制限など。調整はまずここ |
 | [src/breeds.ts](src/breeds.ts) | 犬種のデータ。配列に1個足せば犬種が増える |
 | [src/types.ts](src/types.ts) | データの「形」の定義。セーブデータの中身はここを見る |
@@ -46,6 +46,7 @@
 | [src/hooks/usePedometer.ts](src/hooks/usePedometer.ts) | 端末の歩数計との連携 |
 | [src/screens/](src/screens/) | 画面(犬種選択・ホーム) |
 | [src/components/dog/DogFigure.tsx](src/components/dog/DogFigure.tsx) | SVGで描いた「動く犬」。パーツの形・色・アニメーションぜんぶここ |
+| [src/components/dog/shapes.ts](src/components/dog/shapes.ts) | プードルなどの「もこもこ」輪郭を計算でつくる関数 |
 | [src/components/](src/components/) | 使い回すUI部品(ステータスバー・ボタン) |
 | [App.tsx](App.tsx) | 入り口。画面の出し分けだけ |
 
@@ -71,7 +72,7 @@
 ### 歩数のOSごとの違い
 
 | | iOS | Android |
-|---|---|---|
+| --- | --- | --- |
 | 取れるもの | 今日0時からの合計歩数(過去7日までさかのぼれる) | アプリを開いてからの歩数のみ |
 | 実装 | `Pedometer.getStepCountAsync()` | `Pedometer.watchStepCount()` |
 
