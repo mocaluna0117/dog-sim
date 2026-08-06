@@ -92,6 +92,7 @@ Androidで「今日の合計」を取るには Health Connect 連携が必要(�
 
 ## トラブルシューティング
 
+- **コードを変えたのに見た目が変わらない/一部だけ古い** → 開発サーバー(`npx expo start`)が止まっていると、Expo Goは**最後にダウンロードした古いJSをキャッシュから表示**する(エラーも出ないので気づきにくい)。ターミナルで `npx expo start` が動いていることを確認してから、Expo Goでプロジェクトを開き直す。PCのスリープやターミナルを閉じるとサーバーは止まるので注意
 - **「Project is incompatible with this version of Expo Go」と出る** → プロジェクトのExpo SDKバージョンと、スマホのExpo Goが対応するSDKバージョンが合っていない。
   このプロジェクトは、App Store版Expo Goに合わせて **SDK 54** に固定してある(2026年8月時点、Appleの審査遅延でApp Store版がSDK 54のまま止まっているため)。
   App Store版Expo Goが新しくなったら `npx expo install expo@latest` → `npx expo install --fix` でプロジェクト側も上げられる
